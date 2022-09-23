@@ -46,7 +46,7 @@ There is a fully functional sample application that demonstrates the usage of bi
 public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
 
-    payment = new Payment(getActivityResultRegistry(), this, BuildConfig.IAB_PUBLIC_KEY);
+    payment = new Payment(getActivityResultRegistry(), this, "PUBLIC_KEY");
     payment.setCanAutoConsume(false);
     payment.setOnPaymentResultListener(new OnPaymentResultListener() {
         @Override
