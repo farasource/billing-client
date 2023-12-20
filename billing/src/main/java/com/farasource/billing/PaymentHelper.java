@@ -140,13 +140,18 @@ public class PaymentHelper {
      *                        is NOT your "developer public key".
      */
     protected PaymentHelper(ActivityResultRegistry registry, Context ctx, String base64PublicKey) {
-        paymentLauncher = new com.farasource.billing.PaymentLauncher.Builder().build(
-                registry,
-                result -> Objects.requireNonNull(iabConnection).getPurchaseResultReceiver().onReceiver(result.getResultCode(), result.getData())
-        );
+        buildPaymentLauncher(registry);
         mContext = ctx.getApplicationContext();
         mSignatureBase64 = base64PublicKey;
         logger.logDebug("IAB helper created.");
+    }
+
+    public void buildPaymentLauncher(ActivityResultRegistry registry) {
+        if (registry == null) return;
+        paymentLauncher = new PaymentLauncher.Builder().build(
+                registry,
+                result -> Objects.requireNonNull(iabConnection).getPurchaseResultReceiver().onReceiver(result.getResultCode(), result.getData())
+        );
     }
 
     /**
@@ -387,6 +392,9 @@ public class PaymentHelper {
                                    OnIabPurchaseFinishedListener listener, String extraData) {
         checkNotDisposed();
         checkSetupDone("launchPurchaseFlow");
+        if (paymentLauncher == null) {
+            throw new IllegalStateException("paymentLauncher can`t be null.");
+        }
         iabConnection.launchPurchaseFlow(mContext, paymentLauncher, sku, itemType, listener, extraData);
     }
 

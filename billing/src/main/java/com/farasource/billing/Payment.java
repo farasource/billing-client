@@ -117,30 +117,33 @@ public class Payment {
             return;
         }
         try {
-            mHelper.startSetup(new PaymentHelper.OnIabSetupFinishedListener() {
-                @Override
-                public void onIabSetupFinished(IabResult result) {
-                    if (result.isFailure()) {
-                        logger.logDebug("startSetup failed.");
+            mHelper.startSetup(result -> {
+                if (result.isFailure()) {
+                    logger.logDebug("startSetup failed.");
 
-                        onBillingStatus(TableCodes.SETUP_FAILED);
-                        //
-                        dispose();
-                    } else {
-                        // Have we been disposed of in the meantime? If so, quit.
-                        if (mHelper == null) return;
+                    onBillingStatus(TableCodes.SETUP_FAILED);
+                    //
+                    dispose();
+                } else {
+                    // Have we been disposed of in the meantime? If so, quit.
+                    if (mHelper == null) return;
 
-                        // IAB is fully set up. Now, let's get an inventory of stuff we own.
-                        logger.logDebug("Setup successful. Querying inventory.");
-                        startedSetup = true;
-                        onBillingStatus(TableCodes.SETUP_SUCCESS);
-                        mHelper.queryInventoryAsync(mGotInventoryListener);
-                    }
+                    // IAB is fully set up. Now, let's get an inventory of stuff we own.
+                    logger.logDebug("Setup successful. Querying inventory.");
+                    startedSetup = true;
+                    onBillingStatus(TableCodes.SETUP_SUCCESS);
+                    mHelper.queryInventoryAsync(mGotInventoryListener);
                 }
             });
         } catch (Exception e) {
             logger.logDebug(e.toString());
             onBillingStatus(TableCodes.SETUP_FAILED);
+        }
+    }
+
+    public void rebuildActivityResultRegistry(ActivityResultRegistry registry) {
+        if (mHelper != null) {
+            mHelper.buildPaymentLauncher(registry);
         }
     }
 

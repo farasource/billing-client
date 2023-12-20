@@ -1,42 +1,28 @@
 [![](https://jitpack.io/v/farasource/billing-client.svg)](https://jitpack.io/#farasource/billing-client)
 -
-GooglePlay/CafeBazaar/Myket/Other In-app purchase sdk
+GooglePlay/CafeBazaar/Myket/Other in-app purchase sdk
 
 ## Getting Started
 
-To start working with billing-client, you need to add its dependency into your `build.gradle` file:
-### Dependency
+**Step 1.** Add the dependency in your root `build.gradle`:
 ```groovy
 dependencies {
     implementation "com.github.farasource:billing-client:[latest_version]"
 }
 ```
 
-Then you need to add jitpack as your maven repository:
-
-* **New method** add in `settings.gradle` file:
+**Step 2.** Add it at the end of repositories:
 ```groovy
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
-        google()
         mavenCentral()
         maven { url 'https://jitpack.io' }
     }
 }
 ```
 
-* **Old method** add in `build.gradle` file:
-```groovy
-allprojects {
-    repositories {
-        maven { url 'https://jitpack.io' }
-    }
-}
-```
-
-Then you need to add config in `build.gradle`  file:
-
+**Step 3.** Add config:
 ```GRADLE
 android {
     defaultConfig {
