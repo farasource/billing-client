@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 
 import androidx.activity.result.ActivityResultRegistry;
+
 import com.farasource.billing.util.IABLogger;
 import com.farasource.billing.util.IabResult;
 import com.farasource.billing.util.Inventory;
@@ -20,7 +21,7 @@ public class Payment {
     PaymentHelper mHelper;
     private String SKU = null;
     private final String RSA;
-    private boolean canAutoConsume, disposed, hasLaunch, startedSetup;
+    private boolean globalAutoConsume, autoConsume, disposed, hasLaunch, startedSetup;
     private OnPaymentResultListener onPaymentResultListener;
     // Called when consumption is complete
     PaymentHelper.OnConsumeFinishedListener mConsumeFinishedListener = new PaymentHelper.OnConsumeFinishedListener() {
@@ -61,7 +62,7 @@ public class Payment {
                 return;
             } else {
 
-                if (canAutoConsume) consume(purchase);
+                if (autoConsume) consume(purchase);
 
                 if (onPaymentResultListener != null)
                     onPaymentResultListener.onBillingSuccess(purchase);
@@ -110,7 +111,7 @@ public class Payment {
     public void setOnPaymentResultListener(OnPaymentResultListener onPaymentResultListener) {
         this.onPaymentResultListener = onPaymentResultListener;
         mHelper = new PaymentHelper(activityResultRegistry, context, RSA);
-        if (!isMarketInstalled()) {
+        if (isMarketNotInstalled()) {
             onBillingStatus(TableCodes.MARKET_NOT_INSTALLED);
             return;
         } else if (startedSetup) {
@@ -148,33 +149,33 @@ public class Payment {
     }
 
     public void launchPayment(String sku) {
-        launchPayment(sku, PaymentHelper.ITEM_TYPE_INAPP, "", false);
+        launchPayment(sku, PaymentHelper.ITEM_TYPE_INAPP, "", globalAutoConsume);
     }
 
-    public void launchPayment(String sku, boolean canAutoConsume) {
-        launchPayment(sku, PaymentHelper.ITEM_TYPE_INAPP, "", canAutoConsume);
+    public void launchPayment(String sku, boolean autoConsume) {
+        launchPayment(sku, PaymentHelper.ITEM_TYPE_INAPP, "", autoConsume);
     }
 
     public void launchPayment(String sku, String type) {
-        launchPayment(sku, type, "", false);
+        launchPayment(sku, type, "", globalAutoConsume);
     }
 
-    public void launchPayment(String sku, String type, boolean canAutoConsume) {
-        launchPayment(sku, type, "", canAutoConsume);
+    public void launchPayment(String sku, String type, boolean autoConsume) {
+        launchPayment(sku, type, "", autoConsume);
     }
 
     public void launchPayment(String sku, String type, String payload) {
-        launchPayment(sku, type, payload, false);
+        launchPayment(sku, type, payload, globalAutoConsume);
     }
 
-    public void launchPayment(String sku, String type, String payload, boolean canAutoConsume) {
+    public void launchPayment(String sku, String type, String payload, boolean autoConsume) {
         if (disposed) {
             onBillingStatus(TableCodes.PAYMENT_DISPOSED);
             return;
         } else if (hasLaunch) {
             onBillingStatus(TableCodes.PAYMENT_IS_IN_PROGRESS);
             return;
-        } else if (!isMarketInstalled()) {
+        } else if (isMarketNotInstalled()) {
             onBillingStatus(TableCodes.MARKET_NOT_INSTALLED);
             return;
         } else if (!com.farasource.billing.NetworkCheck.isOnline(context)) {
@@ -182,7 +183,7 @@ public class Payment {
             return;
         }
         this.SKU = sku;
-        this.canAutoConsume = canAutoConsume;
+        this.autoConsume = autoConsume;
         if (PaymentHelper.ITEM_TYPE_SUBS.equals(type) && !mHelper.subscriptionsSupported()) {
             logger.logDebug("Subscriptions not supported on your device yet. Sorry!");
             onBillingStatus(TableCodes.SUBSCRIPTIONS_NOT_SUPPORTED);
@@ -198,12 +199,12 @@ public class Payment {
         }
     }
 
-    public void setCanAutoConsume(boolean canAutoConsume) {
+    public void setGlobalAutoConsume(boolean autoConsume) {
         if (hasLaunch) {
             logger.logDebug("Can't be used while payment is active.");
             return;
         }
-        this.canAutoConsume = canAutoConsume;
+        this.globalAutoConsume = autoConsume;
     }
 
     public void consume(Purchase purchase) {
@@ -234,12 +235,12 @@ public class Payment {
         mConsumeFinishedListener = null;
     }
 
-    private boolean isMarketInstalled() {
+    private boolean isMarketNotInstalled() {
         try {
-            context.getPackageManager().getPackageInfo( mHelper.getMarketId(), PackageManager.GET_ACTIVITIES);
-            return true;
-        } catch (PackageManager.NameNotFoundException e) {
+            context.getPackageManager().getPackageInfo(mHelper.getMarketId(), PackageManager.GET_ACTIVITIES);
             return false;
+        } catch (PackageManager.NameNotFoundException e) {
+            return true;
         }
     }
 

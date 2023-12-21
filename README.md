@@ -46,7 +46,7 @@ public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
 
     payment = new Payment(getActivityResultRegistry(), this, "PUBLIC_KEY");
-    payment.setCanAutoConsume(false);
+    payment.setGlobalAutoConsume(false);
     payment.setOnPaymentResultListener(new OnPaymentResultListener() {
         @Override
         public void onBillingSuccess(Purchase purchase) {

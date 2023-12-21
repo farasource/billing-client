@@ -129,7 +129,7 @@ public class MainActivity extends AppCompatActivity {
         // Create the helper, passing it our context and the public key to verify signatures with
         Log.d(TAG, "Creating IAB helper.");
         payment = new Payment(getActivityResultRegistry(), this, "PUBLIC_KEY");
-        payment.setCanAutoConsume(false);
+        payment.setGlobalAutoConsume(false);
         payment.setOnPaymentResultListener(new OnPaymentResultListener() {
             @Override
             public void onBillingSuccess(Purchase purchase) {
