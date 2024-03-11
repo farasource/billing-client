@@ -19,9 +19,9 @@ public class Payment {
     private final ActivityResultRegistry activityResultRegistry;
     // The helper object
     PaymentHelper mHelper;
-    private String SKU = null;
-    private final String RSA;
-    private boolean globalAutoConsume, autoConsume, disposed, hasLaunch, startedSetup;
+    private String sku = null;
+    private String base64PublicKey = null;
+    private boolean globalAutoConsume, autoConsume, disposed, hasLaunch, startedSetup, hasGotInventory;
     private OnPaymentResultListener onPaymentResultListener;
     // Called when consumption is complete
     PaymentHelper.OnConsumeFinishedListener mConsumeFinishedListener = new PaymentHelper.OnConsumeFinishedListener() {
@@ -57,7 +57,7 @@ public class Payment {
             // if we were disposed of in the meantime, quit.
             if (mHelper == null) return;
 
-            if (result.isFailure() || !purchase.getSku().equalsIgnoreCase(SKU)) {
+            if (result.isFailure() || !purchase.getSku().equalsIgnoreCase(sku)) {
                 onBillingStatus(TableCodes.PAYMENT_FAILED);
                 return;
             } else {
@@ -77,6 +77,8 @@ public class Payment {
         @Override
         public void onQueryInventoryFinished(IabResult result, Inventory inv) {
             logger.logDebug("Query inventory finished.");
+
+            hasGotInventory = false;
 
             // Have we been disposed of in the meantime? If so, quit.
             if (mHelper == null) return;
@@ -102,15 +104,19 @@ public class Payment {
         }
     };
 
-    public Payment(ActivityResultRegistry registry, Context context, String rsa) {
+    public Payment(ActivityResultRegistry registry, Context context) {
+        this(registry, context, null);
+    }
+
+    public Payment(ActivityResultRegistry registry, Context context, String base64PublicKey) {
         this.activityResultRegistry = registry;
         this.context = context;
-        this.RSA = rsa;
+        this.base64PublicKey = base64PublicKey;
     }
 
     public void setOnPaymentResultListener(OnPaymentResultListener onPaymentResultListener) {
         this.onPaymentResultListener = onPaymentResultListener;
-        mHelper = new PaymentHelper(activityResultRegistry, context, RSA);
+        mHelper = new PaymentHelper(activityResultRegistry, context, base64PublicKey);
         if (isMarketNotInstalled()) {
             onBillingStatus(TableCodes.MARKET_NOT_INSTALLED);
             return;
@@ -131,9 +137,17 @@ public class Payment {
 
                     // IAB is fully set up. Now, let's get an inventory of stuff we own.
                     logger.logDebug("Setup successful. Querying inventory.");
+
+                    if (!hasLaunch) {
+                        try {
+                            hasGotInventory = true;
+                            mHelper.queryInventoryAsync(mGotInventoryListener);
+                        } catch (Exception e) {
+                            hasGotInventory = false;
+                        }
+                    }
                     startedSetup = true;
                     onBillingStatus(TableCodes.SETUP_SUCCESS);
-                    mHelper.queryInventoryAsync(mGotInventoryListener);
                 }
             });
         } catch (Exception e) {
@@ -146,6 +160,10 @@ public class Payment {
         if (mHelper != null) {
             mHelper.buildPaymentLauncher(registry);
         }
+    }
+
+    public void setBase64PublicKey(String base64PublicKey) {
+        this.base64PublicKey = base64PublicKey;
     }
 
     public void launchPayment(String sku) {
@@ -172,7 +190,7 @@ public class Payment {
         if (disposed) {
             onBillingStatus(TableCodes.PAYMENT_DISPOSED);
             return;
-        } else if (hasLaunch) {
+        } else if (hasLaunch || hasGotInventory) {
             onBillingStatus(TableCodes.PAYMENT_IS_IN_PROGRESS);
             return;
         } else if (isMarketNotInstalled()) {
@@ -182,7 +200,7 @@ public class Payment {
             onBillingStatus(TableCodes.NO_NETWORK);
             return;
         }
-        this.SKU = sku;
+        this.sku = sku;
         this.autoConsume = autoConsume;
         if (PaymentHelper.ITEM_TYPE_SUBS.equals(type) && !mHelper.subscriptionsSupported()) {
             logger.logDebug("Subscriptions not supported on your device yet. Sorry!");
@@ -235,14 +253,19 @@ public class Payment {
         mConsumeFinishedListener = null;
     }
 
-    private boolean isMarketNotInstalled() {
+    public static boolean isPackageInstalled(Context context, String packageID) {
         try {
-            context.getPackageManager().getPackageInfo(mHelper.getMarketId(), PackageManager.GET_ACTIVITIES);
-            return false;
-        } catch (PackageManager.NameNotFoundException e) {
+            context.getPackageManager().getPackageInfo(packageID, PackageManager.GET_ACTIVITIES);
             return true;
+        } catch (PackageManager.NameNotFoundException e) {
+            return false;
         }
     }
+
+    private boolean isMarketNotInstalled() {
+        return !isPackageInstalled(context, mHelper.getMarketId());
+    }
+
 
     private void onBillingStatus(int code) {
         if (onPaymentResultListener != null) onPaymentResultListener.onBillingStatus(code);
