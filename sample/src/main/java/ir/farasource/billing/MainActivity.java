@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package ir.farasource.inapp.payment.sample;
+package ir.farasource.billing;
 
 import android.app.AlertDialog;
 import android.content.SharedPreferences;
@@ -22,9 +22,9 @@ import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
 
-import com.farasource.billing.Payment;
-import com.farasource.billing.PaymentHelper;
-import com.farasource.billing.communication.OnPaymentResultListener;
+import com.farasource.billing.BillingClient;
+import com.farasource.billing.BillingHelper;
+import com.farasource.billing.communication.OnBillingResultListener;
 import com.farasource.billing.util.Inventory;
 import com.farasource.billing.util.Purchase;
 import com.farasource.billing.util.TableCodes;
@@ -104,7 +104,7 @@ public class MainActivity extends AppCompatActivity {
     // Current amount of gas in tank, in units
     int mTank;
 
-    Payment payment;
+    BillingClient billingClient;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -128,9 +128,9 @@ public class MainActivity extends AppCompatActivity {
 
         // Create the helper, passing it our context and the public key to verify signatures with
         Log.d(TAG, "Creating IAB helper.");
-        payment = new Payment(getActivityResultRegistry(), this, "PUBLIC_KEY");
-        payment.setGlobalAutoConsume(false);
-        payment.setOnPaymentResultListener(new OnPaymentResultListener() {
+        billingClient = new BillingClient(getActivityResultRegistry(), this);
+        billingClient.setGlobalAutoConsume(false);
+        billingClient.setOnBillingResultListener(new OnBillingResultListener() {
             @Override
             public void onBillingSuccess(Purchase purchase) {
                 if (!verifyDeveloperPayload(purchase)) {
@@ -144,7 +144,7 @@ public class MainActivity extends AppCompatActivity {
                 if (purchase.getSku().equals(SKU_GAS)) {
                     // bought 1/4 tank of gas. So consume it.
                     Log.d(TAG, "Purchase is gas. Starting gas consumption.");
-                    payment.consume(purchase);
+                    billingClient.consume(purchase);
                 } else if (purchase.getSku().equals(SKU_PREMIUM)) {
                     // bought the premium upgrade!
                     Log.d(TAG, "Purchase is premium upgrade. Congratulating user.");
@@ -203,7 +203,7 @@ public class MainActivity extends AppCompatActivity {
                 Purchase gasPurchase = inventory.getPurchase(SKU_GAS);
                 if (gasPurchase != null && verifyDeveloperPayload(gasPurchase)) {
                     Log.d(TAG, "We have gas. Consuming it.");
-                    payment.consume(inventory.getPurchase(SKU_GAS));
+                    billingClient.consume(inventory.getPurchase(SKU_GAS));
                     return;
                 }
 
@@ -242,7 +242,7 @@ public class MainActivity extends AppCompatActivity {
          *        an empty string, but on a production app you should carefully generate this. */
         String payload = "";
 
-        payment.launchPayment(SKU_GAS, PaymentHelper.ITEM_TYPE_INAPP, payload);
+        billingClient.launchBilling(SKU_GAS, BillingHelper.ITEM_TYPE_INAPP, payload);
     }
 
     // User clicked the "Upgrade to Premium" button.
@@ -255,7 +255,7 @@ public class MainActivity extends AppCompatActivity {
          *        an empty string, but on a production app you should carefully generate this. */
         String payload = "";
 
-        payment.launchPayment(SKU_PREMIUM, PaymentHelper.ITEM_TYPE_INAPP, payload);
+        billingClient.launchBilling(SKU_PREMIUM, BillingHelper.ITEM_TYPE_INAPP, payload);
     }
 
     // "Subscribe to infinite gas" button clicked. Explain to user, then start purchase
@@ -268,7 +268,7 @@ public class MainActivity extends AppCompatActivity {
 
         setWaitScreen(true);
         Log.d(TAG, "Launching purchase flow for infinite gas subscription.");
-        payment.launchPayment(SKU_INFINITE_GAS, PaymentHelper.ITEM_TYPE_SUBS, payload);
+        billingClient.launchBilling(SKU_INFINITE_GAS, BillingHelper.ITEM_TYPE_SUBS, payload);
     }
 
     /**
@@ -324,9 +324,9 @@ public class MainActivity extends AppCompatActivity {
 
         // very important:
         Log.d(TAG, "Destroying helper.");
-        if (payment != null) {
-            payment.dispose();
-            payment = null;
+        if (billingClient != null) {
+            billingClient.endConnection();
+            billingClient = null;
         }
     }
 

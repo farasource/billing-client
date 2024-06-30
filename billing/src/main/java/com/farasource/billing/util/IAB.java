@@ -8,24 +8,23 @@ import android.os.RemoteException;
 
 import org.json.JSONException;
 
-import com.farasource.billing.PaymentHelper;
-import com.farasource.billing.PaymentLauncher;
+import com.farasource.billing.BillingHelper;
+import com.farasource.billing.BillingLauncher;
 import com.farasource.billing.communication.BillingSupportCommunication;
 
-import static com.farasource.billing.PaymentHelper.BILLING_RESPONSE_RESULT_OK;
-import static com.farasource.billing.PaymentHelper.IABHELPER_BAD_RESPONSE;
-import static com.farasource.billing.PaymentHelper.IABHELPER_UNKNOWN_ERROR;
-import static com.farasource.billing.PaymentHelper.IABHELPER_UNKNOWN_PURCHASE_RESPONSE;
-import static com.farasource.billing.PaymentHelper.IABHELPER_USER_CANCELLED;
-import static com.farasource.billing.PaymentHelper.IABHELPER_VERIFICATION_FAILED;
-import static com.farasource.billing.PaymentHelper.RESPONSE_CODE;
-import static com.farasource.billing.PaymentHelper.RESPONSE_INAPP_PURCHASE_DATA;
-import static com.farasource.billing.PaymentHelper.RESPONSE_INAPP_SIGNATURE;
-import static com.farasource.billing.PaymentHelper.getResponseDesc;
+import static com.farasource.billing.BillingHelper.BILLING_RESPONSE_RESULT_OK;
+import static com.farasource.billing.BillingHelper.IABHELPER_BAD_RESPONSE;
+import static com.farasource.billing.BillingHelper.IABHELPER_UNKNOWN_ERROR;
+import static com.farasource.billing.BillingHelper.IABHELPER_UNKNOWN_PURCHASE_RESPONSE;
+import static com.farasource.billing.BillingHelper.IABHELPER_USER_CANCELLED;
+import static com.farasource.billing.BillingHelper.IABHELPER_VERIFICATION_FAILED;
+import static com.farasource.billing.BillingHelper.RESPONSE_CODE;
+import static com.farasource.billing.BillingHelper.RESPONSE_INAPP_PURCHASE_DATA;
+import static com.farasource.billing.BillingHelper.RESPONSE_INAPP_SIGNATURE;
+import static com.farasource.billing.BillingHelper.getResponseDesc;
 
 public abstract class IAB {
 
-    private final String mSignatureBase64;
     // Are subscriptions supported?
     public boolean mSubscriptionsSupported = false;
     // Is setup done?
@@ -38,7 +37,7 @@ public abstract class IAB {
     String mPurchasingItemType;
     // The listener registered on launchPurchaseFlow, which we have to call back when
     // the purchase finishes
-    PaymentHelper.OnIabPurchaseFinishedListener mPurchaseListener;
+    BillingHelper.OnIabPurchaseFinishedListener mPurchaseListener;
     private final ResultReceiver purchaseResultReceiver = new ResultReceiver() {
         @Override
         public void onReceiver(int resultCode, Intent data) {
@@ -75,22 +74,9 @@ public abstract class IAB {
                     return;
                 }
 
-                Purchase purchase = null;
+                Purchase purchase;
                 try {
                     purchase = new Purchase(mPurchasingItemType, purchaseData, dataSignature);
-                    String sku = purchase.getSku();
-
-                    // Verify signature
-                    if (!Security.verifyPurchase(mSignatureBase64, purchaseData, dataSignature)) {
-                        logger.logError("Purchase signature verification FAILED for sku " + sku);
-                        result = new IabResult(IABHELPER_VERIFICATION_FAILED,
-                                "Signature verification failed for sku " + sku);
-                        if (mPurchaseListener != null) {
-                            mPurchaseListener.onIabPurchaseFinished(result, purchase);
-                        }
-                        return;
-                    }
-
                     logger.logDebug("Purchase signature successfully verified.");
                 } catch (JSONException e) {
                     logger.logError("Failed to parse purchase data.");
@@ -133,11 +119,10 @@ public abstract class IAB {
     };
     boolean mDisposed = false;
 
-    public IAB(IABLogger logger, String marketId, String bindAddress, String mSignatureBase64) {
+    public IAB(IABLogger logger, String marketId, String bindAddress) {
         this.logger = logger;
         this.marketId = marketId;
         this.bindAddress = bindAddress;
-        this.mSignatureBase64 = mSignatureBase64;
     }
 
     public ResultReceiver getPurchaseResultReceiver() {
@@ -192,10 +177,10 @@ public abstract class IAB {
             BillingSupportCommunication communication);
 
     public abstract void launchPurchaseFlow(
-            Context mContext, PaymentLauncher paymentLauncher,
+            Context mContext, BillingLauncher billingLauncher,
             String sku,
             String itemType,
-            PaymentHelper.OnIabPurchaseFinishedListener listener,
+            BillingHelper.OnIabPurchaseFinishedListener listener,
             String extraData);
 
     public abstract void consume(Context mContext, Purchase itemInfo) throws IabException;

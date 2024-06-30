@@ -5,23 +5,23 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 
-import com.farasource.billing.communication.PaymentReceiverCommunicator;
+import com.farasource.billing.communication.BillingReceiverCommunicator;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class PaymentReceiver extends BroadcastReceiver {
+public class BillingReceiver extends BroadcastReceiver {
 
     private static final Object observerLock = new Object();
-    private static final List<PaymentReceiverCommunicator> observers = new ArrayList<>();
+    private static final List<BillingReceiverCommunicator> observers = new ArrayList<>();
 
-    public static void addObserver(PaymentReceiverCommunicator communicator) {
+    public static void addObserver(BillingReceiverCommunicator communicator) {
         synchronized (observerLock) {
             observers.add(communicator);
         }
     }
 
-    public static void removeObserver(PaymentReceiverCommunicator communicator) {
+    public static void removeObserver(BillingReceiverCommunicator communicator) {
         synchronized (observerLock) {
             observers.remove(communicator);
         }
@@ -29,7 +29,7 @@ public class PaymentReceiver extends BroadcastReceiver {
 
     private static void notifyObservers(Intent intent) {
         synchronized (observerLock) {
-            for (PaymentReceiverCommunicator observer : observers) {
+            for (BillingReceiverCommunicator observer : observers) {
                 observer.onNewBroadcastReceived(intent);
             }
         }

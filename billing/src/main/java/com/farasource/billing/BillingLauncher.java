@@ -10,13 +10,13 @@ import androidx.activity.result.ActivityResultRegistry;
 import androidx.activity.result.IntentSenderRequest;
 import androidx.activity.result.contract.ActivityResultContracts;
 
-public final class PaymentLauncher {
+public final class BillingLauncher {
 
     private static final String BILLING_SERVICE_KEY = "billing_service_key";
     private final ActivityResultLauncher<Intent> activityLauncher;
     private final ActivityResultLauncher<IntentSenderRequest> activitySenderLauncher;
 
-    private PaymentLauncher(ActivityResultLauncher<Intent> activityLauncher,
+    private BillingLauncher(ActivityResultLauncher<Intent> activityLauncher,
                             ActivityResultLauncher<IntentSenderRequest> activitySenderLauncher) {
         this.activityLauncher = activityLauncher;
         this.activitySenderLauncher = activitySenderLauncher;
@@ -37,18 +37,18 @@ public final class PaymentLauncher {
 
     protected static class Builder {
 
-        public PaymentLauncher build(ActivityResultRegistry registry, ActivityResultCallback<ActivityResult> callback) {
+        public BillingLauncher build(ActivityResultRegistry registry, ActivityResultCallback<ActivityResult> callback) {
             ActivityResultLauncher<Intent> activityLauncher = registry.register(
-                    PaymentLauncher.BILLING_SERVICE_KEY,
+                    BillingLauncher.BILLING_SERVICE_KEY,
                     new ActivityResultContracts.StartActivityForResult(),
                     callback
             );
             ActivityResultLauncher<IntentSenderRequest> activitySenderLauncher = registry.register(
-                    PaymentLauncher.BILLING_SERVICE_KEY,
+                    BillingLauncher.BILLING_SERVICE_KEY,
                     new ActivityResultContracts.StartIntentSenderForResult(),
                     callback
             );
-            return new PaymentLauncher(activityLauncher, activitySenderLauncher);
+            return new BillingLauncher(activityLauncher, activitySenderLauncher);
         }
 
     }

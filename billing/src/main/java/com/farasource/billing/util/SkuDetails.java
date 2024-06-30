@@ -18,7 +18,7 @@ package com.farasource.billing.util;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.farasource.billing.PaymentHelper;
+import com.farasource.billing.BillingHelper;
 
 /**
  * Represents an in-app product's listing details.
@@ -33,7 +33,7 @@ public class SkuDetails {
     String mJson;
 
     public SkuDetails(String jsonSkuDetails) throws JSONException {
-        this(PaymentHelper.ITEM_TYPE_INAPP, jsonSkuDetails);
+        this(BillingHelper.ITEM_TYPE_INAPP, jsonSkuDetails);
     }
 
     public SkuDetails(String itemType, String jsonSkuDetails) throws JSONException {

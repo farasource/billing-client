@@ -11,25 +11,23 @@ import android.text.TextUtils;
 import java.lang.ref.WeakReference;
 import java.util.concurrent.TimeUnit;
 
-import com.farasource.billing.PaymentHelper;
-import com.farasource.billing.PaymentLauncher;
+import com.farasource.billing.BillingHelper;
+import com.farasource.billing.BillingLauncher;
 import com.farasource.billing.communication.BillingSupportCommunication;
 import com.farasource.billing.communication.OnBroadCastConnectListener;
-import com.farasource.billing.communication.PaymentReceiverCommunicator;
-import com.farasource.billing.receiver.PaymentReceiver;
+import com.farasource.billing.communication.BillingReceiverCommunicator;
+import com.farasource.billing.receiver.BillingReceiver;
 
-import static com.farasource.billing.PaymentHelper.BILLING_RESPONSE_RESULT_OK;
-import static com.farasource.billing.PaymentHelper.IABHELPER_ERROR_BASE;
-import static com.farasource.billing.PaymentHelper.IABHELPER_MISSING_TOKEN;
-import static com.farasource.billing.PaymentHelper.RESPONSE_BUY_INTENT;
-import static com.farasource.billing.PaymentHelper.getResponseDesc;
+import static com.farasource.billing.BillingHelper.BILLING_RESPONSE_RESULT_OK;
+import static com.farasource.billing.BillingHelper.IABHELPER_ERROR_BASE;
+import static com.farasource.billing.BillingHelper.IABHELPER_MISSING_TOKEN;
+import static com.farasource.billing.BillingHelper.RESPONSE_BUY_INTENT;
+import static com.farasource.billing.BillingHelper.getResponseDesc;
 
 public class BroadcastIAB extends IAB {
 
     public static final String PACKAGE_NAME_KEY = "packageName";
     public static final String API_VERSION_KEY = "apiVersion";
-    public static final String SECURE_KEY = "secure";
-
     public static final String SUBSCRIPTION_SUPPORT_KEY = "subscriptionSupport";
     public static final String SKU_KEY = "sku";
     public static final String ITEM_TYPE_KEY = "itemType";
@@ -53,8 +51,6 @@ public class BroadcastIAB extends IAB {
     private static final int MYKET_VERSION_CODE_WITH_BROADCAST = 900;
     private static final int BAZAAR_VERSION_CODE_WITH_BROADCAST = 801301;
     private final Context context;
-    private final String signatureBase64;
-
     private AbortableCountDownLatch consumePurchaseLatch;
     private int consumePurchaseResponse;
 
@@ -64,16 +60,14 @@ public class BroadcastIAB extends IAB {
     private AbortableCountDownLatch getPurchaseLatch;
     private Bundle getPurchaseBundle;
 
-    private PaymentReceiverCommunicator paymentReceiverCommunicator = null;
+    private BillingReceiverCommunicator billingReceiverCommunicator = null;
     private WeakReference<OnBroadCastConnectListener> connectListenerWeakReference;
     private WeakReference<BillingSupportCommunication> billingSupportWeakReference;
-    private WeakReference<PaymentLauncher> launchPurchaseActivityWeakReference;
+    private WeakReference<BillingLauncher> launchPurchaseActivityWeakReference;
 
-    public BroadcastIAB(Context context, IABLogger logger, String marketId, String bindAddress,
-                        String mSignatureBase64) {
-        super(logger, marketId, bindAddress, mSignatureBase64);
+    public BroadcastIAB(Context context, IABLogger logger, String marketId, String bindAddress) {
+        super(logger, marketId, bindAddress);
         this.context = context;
-        this.signatureBase64 = mSignatureBase64 != null ? mSignatureBase64 : "secureBroadcastKey";
     }
 
     public boolean connect(Context context, OnBroadCastConnectListener listener) {
@@ -129,16 +123,11 @@ public class BroadcastIAB extends IAB {
     }
 
     private void createIABReceiver() {
-        paymentReceiverCommunicator = intent -> {
+        billingReceiverCommunicator = intent -> {
             logger.logDebug("new message received in broadcast");
             String intentAction = intent.getAction();
             if (intentAction == null) {
                 logger.logError("action is null");
-                return;
-            }
-
-            if (!signatureBase64.equals(intent.getStringExtra(SECURE_KEY))) {
-                logger.logError("broadcastSecure key is not valid");
                 return;
             }
 
@@ -200,13 +189,13 @@ public class BroadcastIAB extends IAB {
         Intent purchaseIntent = extras.getParcelable(RESPONSE_BUY_INTENT);
         logger.logDebug("Launching buy intent");
 
-        PaymentLauncher paymentLauncher = safeGetFromWeakReference(launchPurchaseActivityWeakReference);
-        if (paymentLauncher == null) {
+        BillingLauncher billingLauncher = safeGetFromWeakReference(launchPurchaseActivityWeakReference);
+        if (billingLauncher == null) {
             return;
         }
 
-        // Launching an invisible paymentLauncher that will handle the purchase result
-        paymentLauncher.startIntent(purchaseIntent);
+        // Launching an invisible billingLauncher that will handle the purchase result
+        billingLauncher.startIntent(purchaseIntent);
     }
 
     private void handleBillingSupport(Bundle bundle) {
@@ -226,7 +215,7 @@ public class BroadcastIAB extends IAB {
     }
 
     private void registerBroadcast() {
-        PaymentReceiver.addObserver(paymentReceiverCommunicator);
+        BillingReceiver.addObserver(billingReceiverCommunicator);
     }
 
     private void trySendPingToMarket() {
@@ -241,7 +230,6 @@ public class BroadcastIAB extends IAB {
         intent.setPackage(marketPackageName);
         Bundle bundle = new Bundle();
         bundle.putString(PACKAGE_NAME_KEY, context.getPackageName());
-        bundle.putString(SECURE_KEY, signatureBase64);
         intent.putExtras(bundle);
         return intent;
     }
@@ -259,9 +247,9 @@ public class BroadcastIAB extends IAB {
     }
 
     @Override
-    public void launchPurchaseFlow(Context mContext, PaymentLauncher paymentLauncher, String sku, String itemType,
-                                   PaymentHelper.OnIabPurchaseFinishedListener listener, String extraData) {
-        launchPurchaseActivityWeakReference = new WeakReference<>(paymentLauncher);
+    public void launchPurchaseFlow(Context mContext, BillingLauncher billingLauncher, String sku, String itemType,
+                                   BillingHelper.OnIabPurchaseFinishedListener listener, String extraData) {
+        launchPurchaseActivityWeakReference = new WeakReference<>(billingLauncher);
 
         Intent intent = getNewIntentForBroadcast();
         intent.setAction(getAction(purchaseAction));
@@ -365,8 +353,8 @@ public class BroadcastIAB extends IAB {
     @Override
     public void dispose(Context context) {
         super.dispose(context);
-        if (paymentReceiverCommunicator != null) {
-            PaymentReceiver.removeObserver(paymentReceiverCommunicator);
+        if (billingReceiverCommunicator != null) {
+            BillingReceiver.removeObserver(billingReceiverCommunicator);
         }
         if (consumePurchaseLatch != null) {
             consumePurchaseLatch.abort();
@@ -379,7 +367,7 @@ public class BroadcastIAB extends IAB {
         if (getPurchaseLatch != null) {
             getPurchaseLatch.abort();
         }
-        paymentReceiverCommunicator = null;
+        billingReceiverCommunicator = null;
     }
 
     private String getAction(String action) {

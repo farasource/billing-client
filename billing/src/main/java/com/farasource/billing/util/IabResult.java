@@ -15,7 +15,7 @@
 
 package com.farasource.billing.util;
 
-import com.farasource.billing.PaymentHelper;
+import com.farasource.billing.BillingHelper;
 
 /**
  * Represents the result of an in-app billing operation.
@@ -32,9 +32,9 @@ public class IabResult {
     public IabResult(int response, String message) {
         mResponse = response;
         if (message == null || message.trim().length() == 0) {
-            mMessage = PaymentHelper.getResponseDesc(response);
+            mMessage = BillingHelper.getResponseDesc(response);
         } else {
-            mMessage = message + " (response: " + PaymentHelper.getResponseDesc(response) + ")";
+            mMessage = message + " (response: " + BillingHelper.getResponseDesc(response) + ")";
         }
     }
 
@@ -47,7 +47,7 @@ public class IabResult {
     }
 
     public boolean isSuccess() {
-        return mResponse == PaymentHelper.BILLING_RESPONSE_RESULT_OK;
+        return mResponse == BillingHelper.BILLING_RESPONSE_RESULT_OK;
     }
 
     public boolean isFailure() {

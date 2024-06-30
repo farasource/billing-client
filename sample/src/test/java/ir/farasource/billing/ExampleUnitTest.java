@@ -1,4 +1,4 @@
-package ir.farasource.inapp.payment.sample;
+package ir.farasource.billing;
 
 import org.junit.Test;
 

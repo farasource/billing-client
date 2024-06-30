@@ -1,4 +1,4 @@
-package ir.farasource.inapp.payment.sample;
+package ir.farasource.billing.payment.sample;
 
 import android.content.Context;
 import org.junit.Test;
@@ -20,6 +20,6 @@ public class ExampleInstrumentedTest {
     public void useAppContext() {
         // Context of the app under test.
         Context appContext = InstrumentationRegistry.getInstrumentation().getTargetContext();
-        assertEquals("ir.farasource.inapp.payment.sample", appContext.getPackageName());
+        assertEquals("ir.farasource.billing", appContext.getPackageName());
     }
 }

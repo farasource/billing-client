@@ -9,22 +9,22 @@ import com.farasource.billing.util.IABLogger;
 import com.farasource.billing.util.IabResult;
 import com.farasource.billing.util.Inventory;
 import com.farasource.billing.util.Purchase;
+import com.farasource.billing.util.Security;
 import com.farasource.billing.util.TableCodes;
-import com.farasource.billing.communication.OnPaymentResultListener;
+import com.farasource.billing.communication.OnBillingResultListener;
 
-public class Payment {
+public class BillingClient {
 
     private final IABLogger logger = new IABLogger();
     private final Context context;
     private final ActivityResultRegistry activityResultRegistry;
     // The helper object
-    PaymentHelper mHelper;
+    BillingHelper mHelper;
     private String sku = null;
-    private String base64PublicKey = null;
     private boolean globalAutoConsume, autoConsume, disposed, hasLaunch, startedSetup, hasGotInventory;
-    private OnPaymentResultListener onPaymentResultListener;
+    private OnBillingResultListener onBillingResultListener;
     // Called when consumption is complete
-    PaymentHelper.OnConsumeFinishedListener mConsumeFinishedListener = new PaymentHelper.OnConsumeFinishedListener() {
+    BillingHelper.OnConsumeFinishedListener mConsumeFinishedListener = new BillingHelper.OnConsumeFinishedListener() {
         public void onConsumeFinished(Purchase purchase, IabResult result) {
             logger.logDebug("Consumption finished. Purchase: " + purchase + ", result: " + result);
 
@@ -42,13 +42,13 @@ public class Payment {
             } else {
                 logger.logDebug("Error while consuming: " + result);
             }
-            if (onPaymentResultListener != null)
-                onPaymentResultListener.onConsumeFinished(purchase, result.isSuccess());
+            if (onBillingResultListener != null)
+                onBillingResultListener.onConsumeFinished(purchase, result.isSuccess());
             logger.logDebug("End consumption flow.");
         }
     };
     // Callback for when a purchase is finished
-    PaymentHelper.OnIabPurchaseFinishedListener mPurchaseFinishedListener = new PaymentHelper.OnIabPurchaseFinishedListener() {
+    BillingHelper.OnIabPurchaseFinishedListener mPurchaseFinishedListener = new BillingHelper.OnIabPurchaseFinishedListener() {
         public void onIabPurchaseFinished(IabResult result, Purchase purchase) {
             logger.logDebug("Purchase finished: " + result + ", purchase: " + purchase);
 
@@ -58,14 +58,14 @@ public class Payment {
             if (mHelper == null) return;
 
             if (result.isFailure() || !purchase.getSku().equalsIgnoreCase(sku)) {
-                onBillingStatus(TableCodes.PAYMENT_FAILED);
+                onBillingStatus(TableCodes.BILLING_FAILED);
                 return;
             } else {
 
                 if (autoConsume) consume(purchase);
 
-                if (onPaymentResultListener != null)
-                    onPaymentResultListener.onBillingSuccess(purchase);
+                if (onBillingResultListener != null)
+                    onBillingResultListener.onBillingSuccess(purchase);
             }
 
             logger.logDebug("Purchase successful.");
@@ -73,7 +73,7 @@ public class Payment {
         }
     };
     // Listener that's called when we finish querying the items and subscriptions we own
-    PaymentHelper.QueryInventoryFinishedListener mGotInventoryListener = new PaymentHelper.QueryInventoryFinishedListener() {
+    BillingHelper.QueryInventoryFinishedListener mGotInventoryListener = new BillingHelper.QueryInventoryFinishedListener() {
         @Override
         public void onQueryInventoryFinished(IabResult result, Inventory inv) {
             logger.logDebug("Query inventory finished.");
@@ -97,26 +97,21 @@ public class Payment {
              * verifyDeveloperPayload().
              */
 
-            if (onPaymentResultListener != null)
-                onPaymentResultListener.onQueryInventoryFinished(inv);
+            if (onBillingResultListener != null)
+                onBillingResultListener.onQueryInventoryFinished(inv);
 
             logger.logDebug("Initial inventory query finished; enabling main UI.");
         }
     };
 
-    public Payment(ActivityResultRegistry registry, Context context) {
-        this(registry, context, null);
-    }
-
-    public Payment(ActivityResultRegistry registry, Context context, String base64PublicKey) {
+    public BillingClient(ActivityResultRegistry registry, Context context) {
         this.activityResultRegistry = registry;
         this.context = context;
-        this.base64PublicKey = base64PublicKey;
     }
 
-    public void setOnPaymentResultListener(OnPaymentResultListener onPaymentResultListener) {
-        this.onPaymentResultListener = onPaymentResultListener;
-        mHelper = new PaymentHelper(activityResultRegistry, context, base64PublicKey);
+    public void setOnBillingResultListener(OnBillingResultListener onBillingResultListener) {
+        this.onBillingResultListener = onBillingResultListener;
+        mHelper = new BillingHelper(activityResultRegistry, context);
         if (isMarketNotInstalled()) {
             onBillingStatus(TableCodes.MARKET_NOT_INSTALLED);
             return;
@@ -130,7 +125,7 @@ public class Payment {
 
                     onBillingStatus(TableCodes.SETUP_FAILED);
                     //
-                    dispose();
+                    endConnection();
                 } else {
                     // Have we been disposed of in the meantime? If so, quit.
                     if (mHelper == null) return;
@@ -158,40 +153,41 @@ public class Payment {
 
     public void rebuildActivityResultRegistry(ActivityResultRegistry registry) {
         if (mHelper != null) {
-            mHelper.buildPaymentLauncher(registry);
+            mHelper.buildBillingLauncher(registry);
         }
     }
 
-    public void setBase64PublicKey(String base64PublicKey) {
-        this.base64PublicKey = base64PublicKey;
+    @Deprecated()
+    public static boolean verifyPurchase(Purchase purchase, String base64PublicKey) {
+        return Security.verifyPurchase(base64PublicKey, purchase.getOriginalJson(), purchase.getSignature());
     }
 
-    public void launchPayment(String sku) {
-        launchPayment(sku, PaymentHelper.ITEM_TYPE_INAPP, "", globalAutoConsume);
+    public void launchBilling(String sku) {
+        launchBilling(sku, BillingHelper.ITEM_TYPE_INAPP, "", globalAutoConsume);
     }
 
-    public void launchPayment(String sku, boolean autoConsume) {
-        launchPayment(sku, PaymentHelper.ITEM_TYPE_INAPP, "", autoConsume);
+    public void launchBilling(String sku, boolean autoConsume) {
+        launchBilling(sku, BillingHelper.ITEM_TYPE_INAPP, "", autoConsume);
     }
 
-    public void launchPayment(String sku, String type) {
-        launchPayment(sku, type, "", globalAutoConsume);
+    public void launchBilling(String sku, String type) {
+        launchBilling(sku, type, "", globalAutoConsume);
     }
 
-    public void launchPayment(String sku, String type, boolean autoConsume) {
-        launchPayment(sku, type, "", autoConsume);
+    public void launchBilling(String sku, String type, boolean autoConsume) {
+        launchBilling(sku, type, "", autoConsume);
     }
 
-    public void launchPayment(String sku, String type, String payload) {
-        launchPayment(sku, type, payload, globalAutoConsume);
+    public void launchBilling(String sku, String type, String payload) {
+        launchBilling(sku, type, payload, globalAutoConsume);
     }
 
-    public void launchPayment(String sku, String type, String payload, boolean autoConsume) {
+    public void launchBilling(String sku, String type, String payload, boolean autoConsume) {
         if (disposed) {
-            onBillingStatus(TableCodes.PAYMENT_DISPOSED);
+            onBillingStatus(TableCodes.BILLING_DISPOSED);
             return;
         } else if (hasLaunch || hasGotInventory) {
-            onBillingStatus(TableCodes.PAYMENT_IS_IN_PROGRESS);
+            onBillingStatus(TableCodes.BILLING_IS_IN_PROGRESS);
             return;
         } else if (isMarketNotInstalled()) {
             onBillingStatus(TableCodes.MARKET_NOT_INSTALLED);
@@ -202,7 +198,7 @@ public class Payment {
         }
         this.sku = sku;
         this.autoConsume = autoConsume;
-        if (PaymentHelper.ITEM_TYPE_SUBS.equals(type) && !mHelper.subscriptionsSupported()) {
+        if (BillingHelper.ITEM_TYPE_SUBS.equals(type) && !mHelper.subscriptionsSupported()) {
             logger.logDebug("Subscriptions not supported on your device yet. Sorry!");
             onBillingStatus(TableCodes.SUBSCRIPTIONS_NOT_SUPPORTED);
             return;
@@ -213,13 +209,13 @@ public class Payment {
         } catch (Exception e) {
             logger.logDebug(e.getMessage());
             hasLaunch = false;
-            onBillingStatus(TableCodes.PAYMENT_FAILED);
+            onBillingStatus(TableCodes.BILLING_FAILED);
         }
     }
 
     public void setGlobalAutoConsume(boolean autoConsume) {
         if (hasLaunch) {
-            logger.logDebug("Can't be used while payment is active.");
+            logger.logDebug("Can't be used while billing is active.");
             return;
         }
         this.globalAutoConsume = autoConsume;
@@ -227,20 +223,20 @@ public class Payment {
 
     public void consume(Purchase purchase) {
         if (disposed) {
-            if (onPaymentResultListener != null)
-                onPaymentResultListener.onConsumeFinished(purchase, false);
+            if (onBillingResultListener != null)
+                onBillingResultListener.onConsumeFinished(purchase, false);
             return;
         }
         try {
             mHelper.consumeAsync(purchase, mConsumeFinishedListener);
         } catch (Exception exception) {
             logger.logDebug(exception.getMessage());
-            if (onPaymentResultListener != null)
-                onPaymentResultListener.onConsumeFinished(purchase, false);
+            if (onBillingResultListener != null)
+                onBillingResultListener.onConsumeFinished(purchase, false);
         }
     }
 
-    public void dispose() {
+    public void endConnection() {
         disposed = true;
         try {
             if (mHelper != null) mHelper.dispose();
@@ -268,7 +264,7 @@ public class Payment {
 
 
     private void onBillingStatus(int code) {
-        if (onPaymentResultListener != null) onPaymentResultListener.onBillingStatus(code);
+        if (onBillingResultListener != null) onBillingResultListener.onBillingStatus(code);
     }
 
 }

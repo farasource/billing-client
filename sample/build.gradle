@@ -4,9 +4,10 @@ plugins {
 
 android {
     compileSdk 32
+    namespace = 'ir.farasource.billing'
 
     defaultConfig {
-        applicationId "com.example.android.trivialdrivesample"
+        applicationId "ir.farasource.billing.trivialdrivesample"
         minSdk 16
         targetSdk 32
         versionCode 1
@@ -14,19 +15,13 @@ android {
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
 
-        def marketApplicationId = "com.android.vending"
-        def marketBindAddress = "com.android.vending.billing.InAppBillingService.BIND"
-        manifestPlaceholders = [marketApplicationId: "${marketApplicationId}",
-                                marketBindAddress  : "${marketBindAddress}",
-                                marketPermission   : "${marketApplicationId}.BILLING"]
-
-        /*
         def marketApplicationId = "com.farsitel.bazaar"
         def marketBindAddress = "ir.cafebazaar.pardakht.InAppBillingService.BIND"
-        manifestPlaceholders = [marketApplicationId: "${marketApplicationId}",
-                                marketBindAddress  : "${marketBindAddress}",
-                                marketPermission   : "${marketApplicationId}.permission.PAY_THROUGH_BAZAAR"]
+        addManifestPlaceholders([marketApplicationId: "${marketApplicationId}",
+                                 marketBindAddress  : "${marketBindAddress}",
+                                 marketPermission   : "${marketApplicationId}.permission.PAY_THROUGH_BAZAAR"])
 
+        /*
         def marketApplicationId = "ir.mservices.market"
         def marketBindAddress = "ir.mservices.market.InAppBillingService.BIND"
         manifestPlaceholders = [marketApplicationId: "${marketApplicationId}",

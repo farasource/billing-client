@@ -17,20 +17,20 @@ import com.android.vending.billing.IInAppBillingService;
 
 import java.util.List;
 
-import com.farasource.billing.PaymentHelper;
-import com.farasource.billing.PaymentLauncher;
+import com.farasource.billing.BillingHelper;
+import com.farasource.billing.BillingLauncher;
 import com.farasource.billing.communication.BillingSupportCommunication;
 import com.farasource.billing.communication.OnServiceConnectListener;
 
-import static com.farasource.billing.PaymentHelper.BILLING_RESPONSE_RESULT_OK;
-import static com.farasource.billing.PaymentHelper.IABHELPER_MISSING_TOKEN;
-import static com.farasource.billing.PaymentHelper.IABHELPER_REMOTE_EXCEPTION;
-import static com.farasource.billing.PaymentHelper.IABHELPER_SEND_INTENT_FAILED;
-import static com.farasource.billing.PaymentHelper.IABHELPER_SUBSCRIPTIONS_NOT_AVAILABLE;
-import static com.farasource.billing.PaymentHelper.ITEM_TYPE_INAPP;
-import static com.farasource.billing.PaymentHelper.ITEM_TYPE_SUBS;
-import static com.farasource.billing.PaymentHelper.RESPONSE_BUY_INTENT;
-import static com.farasource.billing.PaymentHelper.getResponseDesc;
+import static com.farasource.billing.BillingHelper.BILLING_RESPONSE_RESULT_OK;
+import static com.farasource.billing.BillingHelper.IABHELPER_MISSING_TOKEN;
+import static com.farasource.billing.BillingHelper.IABHELPER_REMOTE_EXCEPTION;
+import static com.farasource.billing.BillingHelper.IABHELPER_SEND_INTENT_FAILED;
+import static com.farasource.billing.BillingHelper.IABHELPER_SUBSCRIPTIONS_NOT_AVAILABLE;
+import static com.farasource.billing.BillingHelper.ITEM_TYPE_INAPP;
+import static com.farasource.billing.BillingHelper.ITEM_TYPE_SUBS;
+import static com.farasource.billing.BillingHelper.RESPONSE_BUY_INTENT;
+import static com.farasource.billing.BillingHelper.getResponseDesc;
 
 public class ServiceIAB extends IAB {
 
@@ -46,8 +46,8 @@ public class ServiceIAB extends IAB {
     // if mAsyncInProgress == true, what asynchronous operation is in progress?
     private String mAsyncOperation = "";
 
-    public ServiceIAB(IABLogger logger, String packageName, String bindAddress, String mSignatureBase64) {
-        super(logger, packageName, bindAddress, mSignatureBase64);
+    public ServiceIAB(IABLogger logger, String packageName, String bindAddress) {
+        super(logger, packageName, bindAddress);
     }
 
     public void connect(Context context, final OnServiceConnectListener listener) {
@@ -127,8 +127,8 @@ public class ServiceIAB extends IAB {
     }
 
     @Override
-    public void launchPurchaseFlow(Context mContext, PaymentLauncher paymentLauncher, String sku, String itemType,
-                                   PaymentHelper.OnIabPurchaseFinishedListener listener, String extraData) {
+    public void launchPurchaseFlow(Context mContext, BillingLauncher billingLauncher, String sku, String itemType,
+                                   BillingHelper.OnIabPurchaseFinishedListener listener, String extraData) {
 
         flagStartAsync("launchPurchaseFlow");
         IabResult result;
@@ -148,10 +148,10 @@ public class ServiceIAB extends IAB {
             Bundle configBundle = mService.getPurchaseConfig(apiVersion);
             if (configBundle != null && configBundle.getBoolean(INTENT_V2_SUPPORT)) {
                 logger.logDebug("launchBuyIntentV2 for " + sku + ", item type: " + itemType);
-                launchBuyIntentV2(mContext, paymentLauncher, sku, itemType, listener, extraData);
+                launchBuyIntentV2(mContext, billingLauncher, sku, itemType, listener, extraData);
             } else {
                 logger.logDebug("launchBuyIntent for " + sku + ", item type: " + itemType);
-                launchBuyIntent(mContext, paymentLauncher, sku, itemType, listener, extraData);
+                launchBuyIntent(mContext, billingLauncher, sku, itemType, listener, extraData);
             }
         } catch (IntentSender.SendIntentException e) {
             logger.logError("SendIntentException while launching purchase flow for sku " + sku);
@@ -178,10 +178,10 @@ public class ServiceIAB extends IAB {
 
     private void launchBuyIntentV2(
             Context context,
-            PaymentLauncher paymentLauncher,
+            BillingLauncher billingLauncher,
             String sku,
             String itemType,
-            PaymentHelper.OnIabPurchaseFinishedListener listener,
+            BillingHelper.OnIabPurchaseFinishedListener listener,
             String extraData
     ) throws RemoteException {
         String packageName = context.getPackageName();
@@ -202,15 +202,15 @@ public class ServiceIAB extends IAB {
         logger.logDebug("Launching buy intent for " + sku);
         mPurchaseListener = listener;
         mPurchasingItemType = itemType;
-        paymentLauncher.startIntent(purchaseIntent);
+        billingLauncher.startIntent(purchaseIntent);
     }
 
     private void launchBuyIntent(
             Context context,
-            PaymentLauncher paymentLauncher,
+            BillingLauncher billingLauncher,
             String sku,
             String itemType,
-            PaymentHelper.OnIabPurchaseFinishedListener listener,
+            BillingHelper.OnIabPurchaseFinishedListener listener,
             String extraData
     ) throws RemoteException, IntentSender.SendIntentException {
 
@@ -233,7 +233,7 @@ public class ServiceIAB extends IAB {
         logger.logDebug("Launching buy intent for " + sku);
         mPurchaseListener = listener;
         mPurchasingItemType = itemType;
-        paymentLauncher.startIntent(pendingIntent);
+        billingLauncher.startIntent(pendingIntent);
     }
 
     @Override

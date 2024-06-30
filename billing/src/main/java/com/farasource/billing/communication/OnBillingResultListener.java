@@ -3,7 +3,7 @@ package com.farasource.billing.communication;
 import com.farasource.billing.util.Inventory;
 import com.farasource.billing.util.Purchase;
 
-public interface OnPaymentResultListener {
+public interface OnBillingResultListener {
 
     void onBillingSuccess(Purchase purchase);
 

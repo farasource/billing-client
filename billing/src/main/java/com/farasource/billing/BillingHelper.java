@@ -75,7 +75,7 @@ import com.farasource.billing.communication.OnServiceConnectListener;
  *
  * @author Bruno Oliveira (Google)
  */
-public class PaymentHelper {
+public class BillingHelper {
 
     // Billing response codes
     public static final int BILLING_RESPONSE_RESULT_OK = 0;
@@ -117,7 +117,7 @@ public class PaymentHelper {
     private static final String META_DATA_BIND_ADDRESS = "market_bind_address";
     private static final String META_DATA_MARKET_ID = "market_id";
     private final IABLogger logger = new IABLogger();
-    com.farasource.billing.PaymentLauncher paymentLauncher;
+    BillingLauncher billingLauncher;
     IAB iabConnection;
     // Has this object been disposed of? (If so, we should ignore callbacks, etc)
     boolean mDisposed = false;
@@ -126,29 +126,23 @@ public class PaymentHelper {
     // The request code used to launch purchase flow
     int mRequestCode;
     // Public key for verifying signature, in base64 encoding
-    String mSignatureBase64 = null;
 
     /**
      * Creates an instance. After creation, it will not yet be ready to use. You must perform
      * setup by calling {@link #startSetup} and wait for setup to complete. This constructor does not
      * block and is safe to call from a UI thread.
      *
-     * @param ctx             Your application or Activity context. Needed to bind to the in-app billing service.
-     * @param base64PublicKey Your application's public key, encoded in base64.
-     *                        This is used for verification of purchase signatures. You can find your app's base64-encoded
-     *                        public key in your application's page on Google Play Developer Console. Note that this
-     *                        is NOT your "developer public key".
+     * @param ctx Your application or Activity context. Needed to bind to the in-app billing service.
      */
-    protected PaymentHelper(ActivityResultRegistry registry, Context ctx, String base64PublicKey) {
-        buildPaymentLauncher(registry);
+    protected BillingHelper(ActivityResultRegistry registry, Context ctx) {
+        buildBillingLauncher(registry);
         mContext = ctx.getApplicationContext();
-        mSignatureBase64 = base64PublicKey;
         logger.logDebug("IAB helper created.");
     }
 
-    public void buildPaymentLauncher(ActivityResultRegistry registry) {
+    public void buildBillingLauncher(ActivityResultRegistry registry) {
         if (registry == null) return;
-        paymentLauncher = new PaymentLauncher.Builder().build(
+        billingLauncher = new BillingLauncher.Builder().build(
                 registry,
                 result -> Objects.requireNonNull(iabConnection).getPurchaseResultReceiver().onReceiver(result.getResultCode(), result.getData())
         );
@@ -217,7 +211,7 @@ public class PaymentHelper {
         }
         logger.logDebug("Starting in-app billing setup.");
 
-        ServiceIAB serviceIAB = new ServiceIAB(logger, getMarketId(), getBindAddress(), mSignatureBase64);
+        ServiceIAB serviceIAB = new ServiceIAB(logger, getMarketId(), getBindAddress());
 
         OnServiceConnectListener connectListener = new OnServiceConnectListener() {
             @Override
@@ -238,7 +232,7 @@ public class PaymentHelper {
     private void startAlternativeScenario(final OnIabSetupFinishedListener listener) {
         OnBroadCastConnectListener broadCastConnectListener = () -> checkBillingSupported(listener);
 
-        BroadcastIAB broadcastIAB = new BroadcastIAB(mContext, logger, getMarketId(), getBindAddress(), mSignatureBase64);
+        BroadcastIAB broadcastIAB = new BroadcastIAB(mContext, logger, getMarketId(), getBindAddress());
         boolean canConnectToReceiver = broadcastIAB.connect(mContext, broadCastConnectListener);
         logger.logDebug("canConnectToReceiver = " + canConnectToReceiver);
         if (canConnectToReceiver) {
@@ -325,9 +319,9 @@ public class PaymentHelper {
      * disposed of, it can't be used again.
      */
     public void dispose() {
-        if (paymentLauncher != null) {
-            paymentLauncher.unregister();
-            paymentLauncher = null;
+        if (billingLauncher != null) {
+            billingLauncher.unregister();
+            billingLauncher = null;
         }
         logger.logDebug("Disposing.");
         if (iabConnection != null) {
@@ -392,10 +386,10 @@ public class PaymentHelper {
                                    OnIabPurchaseFinishedListener listener, String extraData) {
         checkNotDisposed();
         checkSetupDone("launchPurchaseFlow");
-        if (paymentLauncher == null) {
-            throw new IllegalStateException("paymentLauncher can`t be null.");
+        if (billingLauncher == null) {
+            throw new IllegalStateException("billingLauncher can`t be null.");
         }
-        iabConnection.launchPurchaseFlow(mContext, paymentLauncher, sku, itemType, listener, extraData);
+        iabConnection.launchPurchaseFlow(mContext, billingLauncher, sku, itemType, listener, extraData);
     }
 
     public Inventory queryInventory(boolean querySkuDetails, List<String> moreSkus) throws IabException {
@@ -588,23 +582,16 @@ public class PaymentHelper {
                 String purchaseData = purchaseDataList.get(i);
                 String signature = signatureList.get(i);
                 String sku = ownedSkus.get(i);
-                if (Security.verifyPurchase(mSignatureBase64, purchaseData, signature)) {
-                    logger.logDebug("Sku is owned: " + sku);
-                    Purchase purchase = new Purchase(itemType, purchaseData, signature);
+                logger.logDebug("Sku is owned: " + sku);
+                Purchase purchase = new Purchase(itemType, purchaseData, signature);
 
-                    if (TextUtils.isEmpty(purchase.getToken())) {
-                        logger.logWarn("BUG: empty/null token!");
-                        logger.logDebug("Purchase data: " + purchaseData);
-                    }
-
-                    // Record ownership and token
-                    inv.addPurchase(purchase);
-                } else {
-                    logger.logWarn("Purchase signature verification **FAILED**. Not adding item.");
-                    logger.logDebug("   Purchase data: " + purchaseData);
-                    logger.logDebug("   Signature: " + signature);
-                    verificationFailed = true;
+                if (TextUtils.isEmpty(purchase.getToken())) {
+                    logger.logWarn("BUG: empty/null token!");
+                    logger.logDebug("Purchase data: " + purchaseData);
                 }
+
+                // Record ownership and token
+                inv.addPurchase(purchase);
             }
 
             continueToken = ownedItems.getString(INAPP_CONTINUATION_TOKEN);

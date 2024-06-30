@@ -22,7 +22,7 @@
             android:value="${marketBindAddress}" />
 
         <receiver
-            android:name=".receiver.PaymentReceiver"
+            android:name=".receiver.BillingReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="${marketApplicationId}.ping" />

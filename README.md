@@ -1,6 +1,6 @@
 [![](https://jitpack.io/v/farasource/billing-client.svg)](https://jitpack.io/#farasource/billing-client)
 -
-GooglePlay/CafeBazaar/Myket/Other in-app purchase sdk
+CafeBazaar/Myket in-app purchase sdk
 
 ## Getting Started
 
@@ -45,9 +45,9 @@ There is a fully functional sample application that demonstrates the usage of bi
 public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
 
-    payment = new Payment(getActivityResultRegistry(), this, "PUBLIC_KEY");
-    payment.setGlobalAutoConsume(false);
-    payment.setOnPaymentResultListener(new OnPaymentResultListener() {
+    billingClient = new BillingClient(getActivityResultRegistry(), this);
+    billingClient.setGlobalAutoConsume(false);
+    billingClient.setOnBillingResultListener(new OnBillingResultListener() {
         @Override
         public void onBillingSuccess(Purchase purchase) {
             //
@@ -73,16 +73,16 @@ public void onCreate(Bundle savedInstanceState) {
 }
 ```
 
-* launchPayment
+* launchBilling
 ```JAVA
-payment.launchPayment(SKU_INFINITE_GAS, IabHelper.ITEM_TYPE_SUBS, payload);
+billingClient.launchBilling(sku);
 // or
-payment.launchPayment(sku, IabHelper.ITEM_TYPE_SUBS, payload, canAutoConsume);
+billingClient.launchBilling(sku, IabHelper.ITEM_TYPE_SUBS, payload, canAutoConsume);
 ```
 
 * consume
 ```JAVA
-consume(purchase);
+billingClient.consume(purchase);
 ```
 
 * onDestroy
@@ -90,9 +90,9 @@ consume(purchase);
 @Override
 public void onDestroy() {
     super.onDestroy();
-    if (payment != null) {
-        payment.dispose();
-        payment = null;
+    if (billingClient != null) {
+        billingClient.endConnection();
+        billingClient = null;
     }
 }
 ```
